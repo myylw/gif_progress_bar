@@ -1,9 +1,9 @@
-from PIL import Image, ImageDraw
 from pathlib import Path
 from os import remove
+from PIL import Image, ImageDraw
 
 
-class Gif_progress_bar:
+class GifProgressBar:
     line_wide = 4  # 进度条宽度
     loop_playback = True  # 循环播放
     gif_type = 'C'  # 默认gif后一帧覆盖前一帧
@@ -30,21 +30,21 @@ class Gif_progress_bar:
     def _gif_type_analyze(self):
         # 判断gif帧与帧之间的关系,帧之间叠加为C,每帧之间独立为F
         with open(self.gif_path, 'rb') as gif:
-            im = Image.open(gif)
-            self.size = im.size
+            current_im = Image.open(gif)
+            self.size = current_im.size
             self.gif_type = 'F'
             try:
                 while True:
-                    if im.tile:
-                        # im.tile ('gif', (0, 0, 618, 345), 819, (8, False))
-                        frame_size = im.tile[0][1]  # (0, 0, 618, 345)
-                        # print(tile, frame_size, im.size)
-                        # im.size (618,345)
-                        if frame_size[2:] != im.size:
+                    if current_im.tile:
+                        # current_im.tile ('gif', (0, 0, 618, 345), 819, (8, False))
+                        frame_size = current_im.tile[0][1]  # (0, 0, 618, 345)
+                        # print(tile, frame_size, current_im.size)
+                        # current_im.size (618,345)
+                        if frame_size[2:] != current_im.size:
                             self.gif_type = 'C'  # gif帧之间为叠加模式
                             print('C mode')
                             break
-                    im.seek(im.tell() + 1)
+                    current_im.seek(current_im.tell() + 1)
             except EOFError:
                 pass
 
@@ -153,12 +153,18 @@ class Gif_progress_bar:
         images_obj[0].save(new_path,
                            save_all=True,
                            append_images=images_obj[1::],
-                           loop=loop)
+                           loop=loop,
+                           quality=100)
 
         self._clean_temp()
 
     @classmethod
-    def config(cls, line_wide=4, loop_playback=True, memory_mode=True, cover_original=False, auto_analysis=False):
+    def config(cls, line_wide=4,
+               loop_playback=True,
+               memory_mode=True,
+               cover_original=False,
+               auto_analysis=False):
+
         cls.line_wide = line_wide
         cls.loop_playback = loop_playback
         cls.memory_mode = memory_mode
@@ -174,12 +180,15 @@ class Gif_progress_bar:
 class Gif_progress_bar_factory:
     def __init__(self, path):
         self.path = Path(path)
-        self.handler = Gif_progress_bar
+        self.handler = GifProgressBar
 
     def _gif_list(self) -> list:
         return [i for i in self.path.glob('*.gif')]
 
-    def factory_config(self, line_wide=4, loop_playback=True, memory_mode=True, cover_original=False,
+    def factory_config(self, line_wide=4,
+                       loop_playback=True,
+                       memory_mode=True,
+                       cover_original=False,
                        auto_analysis=False):
 
         config = {'line_wide': line_wide,
