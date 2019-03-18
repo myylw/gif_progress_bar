@@ -151,7 +151,25 @@ class ProcessBarHandle(FramesHandle):
             frame_draw(frames[index], round(step * index))
 
 
+class CompressedSizeHandle(FramesHandle):
+    def __init__(self, size=None, percent=None):
+        self.size = size if size is not None else (128, 128)
+        self.percent = percent
+
+    @staticmethod
+    def _get_size(frames: list):
+        size = frames[0].size
+        return size[0], size[1]
+
+    def frames_handle(self, frames: list):
+        w, h = self._get_size(frames)
+        nw, nh = int(w * self.percent), int(h * self.percent) if self.percent is not None else self.size
+        for frame in frames:
+            frame.thumbnail((nw, nh))
+
+
 if __name__ == '__main__':
     m = MultipleGifProcessor('E:/test/')
     m.handle_register(ProcessBarHandle(line_color='yellow'))
+    m.handle_register(CompressedSizeHandle(percent=0.5))
     m.start_handle()
