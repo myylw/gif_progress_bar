@@ -99,8 +99,7 @@ class MultipleGifProcessor:
         self.handles = []
 
     def get_path_list(self):
-        gif_list = [i for i in self.folder_path.glob('*.gif')]
-        return [i for i in filter(lambda path: not path.name.startswith('_'), gif_list)]
+        return [i for i in filter(lambda path: not path.name.startswith('_'), self.folder_path.glob('*.gif'))]
 
     def handle_register(self, handle: FramesHandle):
         self.handles.append(handle)
