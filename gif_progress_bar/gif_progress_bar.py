@@ -5,7 +5,17 @@ from abc import ABCMeta, abstractmethod
 
 class FramesHandle(metaclass=ABCMeta):
     @abstractmethod
-    def frames_handle(self, frames: list):
+    def frames_handle(self, frames: list) -> list:
+        pass
+
+
+class GifProcessor(metaclass=ABCMeta):
+    @abstractmethod
+    def handle_register(self, handle):
+        pass
+
+    @abstractmethod
+    def start_handle(self):
         pass
 
 
@@ -62,11 +72,12 @@ class GifObject:
                            append_images=frames[1::],
                            loop=0,
                            quality=quality
+
                            )
             del frames
 
 
-class GifProcessor:
+class SingleGifProcessor(GifProcessor):
     def __init__(self, gif_path):
         self.gif_path = Path(gif_path)
         self.gif_obj = GifObject(gif_path)
@@ -83,7 +94,7 @@ class GifProcessor:
             raise RuntimeWarning("没有注册帧处理函数")
 
         for handle in self.handles:
-            handle.frames_handle(self.frames)
+            self.frames = handle.frames_handle(self.frames)
         self._gif_save()
 
     def _save_path(self):
@@ -93,12 +104,12 @@ class GifProcessor:
         self.gif_obj.save_gif(self.frames, self._save_path())
 
 
-class MultipleGifProcessor:
+class MultipleGifProcessor(GifProcessor):
     def __init__(self, folder_path):
         self.folder_path = Path(folder_path)
         self.handles = []
 
-    def get_path_list(self):
+    def get_path_list(self) -> list:
         return [i for i in filter(lambda path: not path.name.startswith('_'), self.folder_path.glob('*.gif'))]
 
     def handle_register(self, handle: FramesHandle):
@@ -109,12 +120,13 @@ class MultipleGifProcessor:
             raise RuntimeWarning("没有注册帧处理函数")
 
         for gif in self.get_path_list():
-            gif_obj = GifProcessor(gif)
+            gif_obj = SingleGifProcessor(gif)
             gif_obj.handles = self.handles
             gif_obj.start_handle()
+            del gif_obj
 
 
-class ProcessBarHandle(FramesHandle):
+class ProgressBarHandle(FramesHandle):
     def __init__(self, line_height=None, line_color="red"):
         self.line_height = line_height
         self.line_color = line_color
@@ -150,11 +162,12 @@ class ProcessBarHandle(FramesHandle):
         for index in range(len(frames)):
             frame_draw(frames[index], round(step * index))
 
+        return frames
+
 
 class CompressedSizeHandle(FramesHandle):
-    def __init__(self, size=None, percent=None):
-        self.size = size if size is not None else (128, 128)
-        self.percent = percent
+    def __init__(self, scaling=None):
+        self.scaling = scaling
 
     @staticmethod
     def _get_size(frames: list):
@@ -163,13 +176,16 @@ class CompressedSizeHandle(FramesHandle):
 
     def frames_handle(self, frames: list):
         w, h = self._get_size(frames)
-        nw, nh = int(w * self.percent), int(h * self.percent) if self.percent is not None else self.size
+        nw, nh = int(w * self.scaling), int(h * self.scaling) if self.scaling else 0.8
+
         for frame in frames:
             frame.thumbnail((nw, nh))
+
+        return frames
 
 
 if __name__ == '__main__':
     m = MultipleGifProcessor('E:/test/')
-    m.handle_register(ProcessBarHandle(line_color='yellow'))
-    m.handle_register(CompressedSizeHandle(percent=0.5))
+    m.handle_register(ProgressBarHandle(line_color='yellow'))
+    m.handle_register(CompressedSizeHandle(scaling=0.5))
     m.start_handle()
